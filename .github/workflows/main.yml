@@ -5,7 +5,7 @@ on:
     branches: [ main ]
   workflow_dispatch:
   schedule:
-    - cron: '0 */6 * * *' # සෑම පැය 6කට වරක් ස්වයංක්‍රීයව පණගන්වයි
+    - cron: '0 */6 * * *' # සෑම පැය 6කට වරක්ම Bot නැවත පණගන්වයි
 
 jobs:
   build:
@@ -18,13 +18,13 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18'
+          node-version: '20' # Node version එක 20 ලෙස වෙනස් කරන ලදි
 
       - name: Install FFMPEG
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
       - name: Install Dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Start Bot
         run: node index.js
