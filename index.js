@@ -10,11 +10,9 @@ const fs = require('fs-extra');
 const yts = require('yt-search');
 const ytdl = require('ytdl-core');
 
-// ⚙️ CONFIGURATION
 const ownerNumber = "94762498519@s.whatsapp.net"; 
 const pairingNumber = "94762498519"; 
 const botName = "VINU ROMAN MESSAGER";
-let mode = "public"; 
 
 async function startBot() {
     const { state, saveCreds } = await useMultiFileAuthState('auth_info');
@@ -28,19 +26,16 @@ async function startBot() {
         },
         printQRInTerminal: false,
         logger: pino({ level: 'silent' }),
-        browser: ["Ubuntu", "Chrome", "20.0.04"],
-        connectTimeoutMs: 60000,
-        keepAliveIntervalMs: 15000
+        browser: ["Ubuntu", "Chrome", "20.0.04"]
     });
 
-    // PAIRING CODE
     if (!sock.authState.creds.registered) {
         setTimeout(async () => {
             try {
                 let code = await sock.requestPairingCode(pairingNumber);
                 code = code?.match(/.{1,4}/g)?.join("-") || code;
                 console.log(`\n\n==== 🔑 YOUR PAIRING CODE: ${code} ====\n\n`);
-            } catch (err) { console.error("Pairing Error: ", err); }
+            } catch (err) { }
         }, 8000);
     }
 
@@ -50,7 +45,7 @@ async function startBot() {
         const { connection, lastDisconnect } = update;
         if (connection === 'open') {
             console.log("✅ VINU ROMAN Connected!");
-            sock.sendMessage(ownerNumber, { text: "System Online! 🚀\nStable Version 2.1.0" });
+            sock.sendMessage(ownerNumber, { text: "System Online! 🚀\nStable Song Downloader Active." });
         }
         if (connection === 'close') {
             let reason = lastDisconnect?.error?.output?.statusCode;
@@ -73,53 +68,39 @@ async function startBot() {
         const text = args.join(" ");
 
         try {
-            switch (command) {
-                case 'menu':
-                case 'help':
-                    const menu = `┏━━━━━━━━━━━━━━━━━━━━━━━━┓\n┃  ✨ *${botName}* ✨  ┃\n┗━━━━━━━━━━━━━━━━━━━━━━━━┛\n\n` +
-                                 `👤 *User:* ${pushName}\n⚙️ *Mode:* ${mode}\n\n` +
-                                 `*📥 DOWNLOADS*\n.song [name]\n.video [link]\n\n` +
-                                 `*📊 INFO*\n.alive\n.runtime\n.owner\n\n` +
-                                 `> *POWERED BY VINU ROMAN*`;
-                    await sock.sendMessage(from, { text: menu }, { quoted: msg });
-                    break;
+            if (command === 'menu' || command === 'help') {
+                const menuText = `┏━━━━━━━━━━━━━━━━━━━━━━━━┓\n┃  ✨ *${botName}* ✨  ┃\n┗━━━━━━━━━━━━━━━━━━━━━━━━┛\n\n👤 *Hi ${pushName}*\n\n*📥 DOWNLOADS*\n.song [name]\n.video [link]\n\n*📊 INFO*\n.alive\n.runtime\n\n> *POWERED BY VINU ROMAN*`;
+                await sock.sendMessage(from, { text: menuText }, { quoted: msg });
+            }
 
-                case 'alive':
-                    await sock.sendMessage(from, { text: `👋 *Hi ${pushName}*\n\nVINU ROMAN is Alive! ✅` }, { quoted: msg });
-                    break;
+            if (command === 'alive') {
+                await sock.sendMessage(from, { text: `👋 *Hi ${pushName}*\n\nVINU ROMAN is Alive & Stable! ✅` }, { quoted: msg });
+            }
 
-                case 'song':
-                    if (!text) return sock.sendMessage(from, { text: "❌ සිංදුවේ නම දෙන්න." });
-                    await sock.sendMessage(from, { text: "🎧 *සොයමින් පවතියි...*" });
-                    
-                    const search = await yts(text);
-                    const video = search.videos[0];
-                    if (!video) return sock.sendMessage(from, { text: "❌ සොයාගත නොහැකි විය." });
+            if (command === 'song') {
+                if (!text) return sock.sendMessage(from, { text: "❌ කරුණාකර සිංදුවේ නම ඇතුළත් කරන්න." });
+                await sock.sendMessage(from, { text: "🎧 *Searching and Downloading...*" });
+                
+                const search = await yts(text);
+                const video = search.videos[0];
+                if (!video) return sock.sendMessage(from, { text: "❌ සොයාගත නොහැකි විය." });
 
-                    const filePath = './temp.mp3';
-                    const videoStream = ytdl(video.url, { filter: 'audioonly' });
-                    
-                    videoStream.pipe(fs.createWriteStream(filePath)).on('finish', async () => {
-                        await sock.sendMessage(from, { 
-                            audio: fs.readFileSync(filePath), 
-                            mimetype: 'audio/mp4',
-                            fileName: `${video.title}.mp3`
-                        }, { quoted: msg });
-                        fs.unlinkSync(filePath);
-                    });
-                    break;
-
-                case 'owner':
-                    await sock.sendMessage(from, { text: `👑 *Owner:* VINU ROMAN\n📱 *Number:* 94762498519` });
-                    break;
-
-                case 'runtime':
-                    const uptime = process.uptime();
-                    await sock.sendMessage(from, { text: `🚀 *Runtime:* ${Math.floor(uptime / 60)} Minutes` });
-                    break;
+                const filePath = `./${Date.now()}.mp3`;
+                const stream = ytdl(video.url, { filter: 'audioonly', quality: 'highestaudio' });
+                
+                stream.pipe(fs.createWriteStream(filePath)).on('finish', async () => {
+                    await sock.sendMessage(from, { 
+                        audio: fs.readFileSync(filePath), 
+                        mimetype: 'audio/mp4',
+                        fileName: `${video.title}.mp3`
+                    }, { quoted: msg });
+                    fs.unlinkSync(filePath);
+                }).on('error', (err) => {
+                    sock.sendMessage(from, { text: "❌ Download Error: YouTube Link Issue." });
+                });
             }
         } catch (e) {
-            console.log(e);
+            console.log("Error logic: ", e);
         }
     });
 }
