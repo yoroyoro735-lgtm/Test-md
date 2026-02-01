@@ -1,6 +1,6 @@
 {
   "name": "vinu-roman-messager",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Super Stable Bot",
   "main": "index.js",
   "dependencies": {
