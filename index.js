@@ -7,12 +7,11 @@ const {
 } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const fs = require('fs-extra');
-const yts = require('yt-search');
-const ytdl = require('ytdl-core');
+const axios = require('axios'); // AI API එකට සම්බන්ධ වීමට
 
 const ownerNumber = "94762498519@s.whatsapp.net"; 
 const pairingNumber = "94762498519"; 
-const botName = "VINU ROMAN MESSAGER";
+const botName = "VINU ROMAN AI";
 
 async function startBot() {
     const { state, saveCreds } = await useMultiFileAuthState('auth_info');
@@ -44,8 +43,7 @@ async function startBot() {
     sock.ev.on('connection.update', (update) => {
         const { connection, lastDisconnect } = update;
         if (connection === 'open') {
-            console.log("✅ VINU ROMAN Connected!");
-            sock.sendMessage(ownerNumber, { text: "System Online! 🚀\nStable Song Downloader Active." });
+            console.log("✅ VINU ROMAN AI Connected!");
         }
         if (connection === 'close') {
             let reason = lastDisconnect?.error?.output?.statusCode;
@@ -60,47 +58,38 @@ async function startBot() {
         const from = msg.key.remoteJid;
         const pushName = msg.pushName || 'User';
         const body = msg.message.conversation || msg.message.extendedTextMessage?.text || "";
+        
         const prefix = ".";
-
-        if (!body.startsWith(prefix)) return;
-        const args = body.slice(prefix.length).trim().split(/\s+/);
-        const command = args.shift().toLowerCase();
-        const text = args.join(" ");
+        const isCmd = body.startsWith(prefix);
+        const command = isCmd ? body.slice(prefix.length).trim().split(/\s+/).shift().toLowerCase() : "";
+        const text = isCmd ? body.slice(prefix.length + command.length).trim() : body.trim();
 
         try {
-            if (command === 'menu' || command === 'help') {
-                const menuText = `┏━━━━━━━━━━━━━━━━━━━━━━━━┓\n┃  ✨ *${botName}* ✨  ┃\n┗━━━━━━━━━━━━━━━━━━━━━━━━┛\n\n👤 *Hi ${pushName}*\n\n*📥 DOWNLOADS*\n.song [name]\n.video [link]\n\n*📊 INFO*\n.alive\n.runtime\n\n> *POWERED BY VINU ROMAN*`;
-                await sock.sendMessage(from, { text: menuText }, { quoted: msg });
+            // 1. COMMANDS (තිත සහිතව වැඩ කරන ඒවා)
+            if (isCmd) {
+                if (command === 'menu') {
+                    return await sock.sendMessage(from, { text: `✨ *${botName} Menu*\n\n.song [name]\n.alive\n\nඔබට ඕනෑම දෙයක් මෙතැන Type කර අසන්න (AI).` });
+                }
+                if (command === 'alive') {
+                    return await sock.sendMessage(from, { text: "I am Alive and Ready to Chat! 🤖" });
+                }
+            } 
+            
+            // 2. AI CHAT LOGIC (තිතක් නොමැතිව ඕනෑම දෙයකට පිළිතුරු දීම)
+            else if (body && !isCmd) {
+                // සරල AI API එකක් භාවිතා කිරීම (GPT-3/4 වැනි)
+                try {
+                    const response = await axios.get(`https://api.simsimi.vn/v2/simsimi?text=${encodeURIComponent(body)}&lc=en`);
+                    const aiReply = response.data.message || "I'm not sure how to answer that.";
+                    await sock.sendMessage(from, { text: `🤖 *AI:* ${aiReply}` }, { quoted: msg });
+                } catch (err) {
+                    // API එක වැඩ නොකරන්නේ නම් වෙනත් ChatGPT API එකක් භාවිතා කළ හැක
+                    await sock.sendMessage(from, { text: "⚠️ AI එකට සම්බන්ධ වීමට නොහැකි විය." });
+                }
             }
 
-            if (command === 'alive') {
-                await sock.sendMessage(from, { text: `👋 *Hi ${pushName}*\n\nVINU ROMAN is Alive & Stable! ✅` }, { quoted: msg });
-            }
-
-            if (command === 'song') {
-                if (!text) return sock.sendMessage(from, { text: "❌ කරුණාකර සිංදුවේ නම ඇතුළත් කරන්න." });
-                await sock.sendMessage(from, { text: "🎧 *Searching and Downloading...*" });
-                
-                const search = await yts(text);
-                const video = search.videos[0];
-                if (!video) return sock.sendMessage(from, { text: "❌ සොයාගත නොහැකි විය." });
-
-                const filePath = `./${Date.now()}.mp3`;
-                const stream = ytdl(video.url, { filter: 'audioonly', quality: 'highestaudio' });
-                
-                stream.pipe(fs.createWriteStream(filePath)).on('finish', async () => {
-                    await sock.sendMessage(from, { 
-                        audio: fs.readFileSync(filePath), 
-                        mimetype: 'audio/mp4',
-                        fileName: `${video.title}.mp3`
-                    }, { quoted: msg });
-                    fs.unlinkSync(filePath);
-                }).on('error', (err) => {
-                    sock.sendMessage(from, { text: "❌ Download Error: YouTube Link Issue." });
-                });
-            }
         } catch (e) {
-            console.log("Error logic: ", e);
+            console.log(e);
         }
     });
 }
