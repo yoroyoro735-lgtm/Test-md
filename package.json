@@ -1,7 +1,7 @@
 {
-  "name": "vinu-roman-ai-bot",
-  "version": "2.5.0",
-  "description": "100-Percent-Stable-Bot",
+  "name": "vinu-roman-fixed-v4",
+  "version": "4.0.0",
+  "description": "FB and TikTok Fixed Bot",
   "main": "index.js",
   "dependencies": {
     "@whiskeysockets/baileys": "latest",
