@@ -48,7 +48,7 @@ async function startBot() {
             if (update.announce === false) {
                 console.log(`🔓 Group Unmuted: ${update.id}`);
                 await sock.sendMessage(update.id, { 
-                    text: " id 💙" 
+                    text: " id 1571726899 " 
                 });
             }
             // announce: true කියන්නේ ගෘප් එක Mute කළා කියන එකයි
